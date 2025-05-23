@@ -11,6 +11,7 @@ def root():
 
 from fastapi import HTTPException
 from app.weather import fetch_weather_data, geocode_location
+from app.hazards import detect_heatwaves
 
 @app.get("/weather")
 async def get_weather(
@@ -24,4 +25,14 @@ async def get_weather(
         raise HTTPException(status_code=404, detail="Location not found")
 
     df = await fetch_weather_data(lat, lon, start, end)
-    return df.head().to_dict(orient="records")
+    heatwaves = detect_heatwaves(df)
+
+    return {
+        "location": location,
+        "start": start,
+        "end": end,
+        "heatwave_threshold": df["temp_max"].quantile(0.95),
+        "total_heatwaves": len(heatwaves),
+        "heatwave_events": heatwaves.to_dict(orient="records")
+    }
+
